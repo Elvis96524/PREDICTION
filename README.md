@@ -12,15 +12,14 @@
 | `index.html` | 应用本体(页面、样式、推演逻辑都在这一个文件里) |
 | `manifest.webmanifest` | 让手机识别为可安装应用(名称、图标、颜色) |
 | `sw.js` | 离线缓存,装好后没有网络也能打开 |
-| `icons/` | 应用图标(192、512 和 iPhone 用的 180) |
-| `.nojekyll` | 告诉 GitHub Pages 原样发布文件 |
+| `icon-192.png`、`icon-512.png`、`apple-touch-icon.png` | 应用图标(安卓用前两个,iPhone 用第三个) |
 | `4d_predictor.py` | 命令行版本(可选,电脑上用 Python 3 运行) |
 
 ## 一、上传到 GitHub 并开启网页托管
 
 1. 在 GitHub 新建一个仓库(例如 `4d-predictor`),可以设为公开。
-2. 把本文件夹里的所有文件上传到仓库根目录,注意保留 `icons` 文件夹和 `.nojekyll`。
-   网页上传时点 **Add file → Upload files**,把文件和文件夹一起拖进去,再点 **Commit changes**。
+2. 把下载到的所有文件上传到仓库根目录,不需要建任何文件夹。
+   网页上传时点 **Add file → Upload files**,把全部文件一起拖进去,再点 **Commit changes**。
 3. 进入仓库的 **Settings → Pages**。
 4. **Build and deployment** 里 Source 选 **Deploy from a branch**,Branch 选 `main`,文件夹选 `/ (root)`,点 **Save**。
 5. 等一两分钟,页面顶部会显示网址,形如 `https://你的用户名.github.io/4d-predictor/`。
