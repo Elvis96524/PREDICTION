@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#1E6B5E">
+<meta name="description" content="按干支五行、梅花易数和二十八星宿推演四位数字">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="4D推演">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; min-height: 100vh; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<title>4D 玄学推演</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&display=swap">
+<style>
+/* Layout: 单列工具页。顶部参数条 → 主推号码 → 四柱/卦象/星宿三块面板 → 解读。数字方块按河图五行着色。 */
+:root {
+  --bg: #ECEFED;
+  --surface: #F8FAF9;
+  --ink: #17211F;
+  --muted: #5B6A66;
+  --line: #CBD4D0;
+  --accent: #1E6B5E;
+  --accent-ink: #FFFFFF;
+  --wood: #3A8A4B;
+  --fire: #C4432E;
+  --earth: #A57A1C;
+  --metal: #6A7886;
+  --water: #2D6AB3;
+  --font-display: "Noto Serif SC", "Songti SC", "Noto Serif CJK SC", serif;
+  --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1614; --surface: #16211E; --ink: #E6EDEA; --muted: #93A39E; --line: #2A3A36;
+    --accent: #5CC4AE; --accent-ink: #0E1614;
+    --wood: #6CC47D; --fire: #F07A62; --earth: #D9A94A; --metal: #A5B2BF; --water: #6FA6E8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1614; --surface: #16211E; --ink: #E6EDEA; --muted: #93A39E; --line: #2A3A36;
+  --accent: #5CC4AE; --accent-ink: #0E1614;
+  --wood: #6CC47D; --fire: #F07A62; --earth: #D9A94A; --metal: #A5B2BF; --water: #6FA6E8;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); line-height: 1.6; padding-inline: 16px; padding-block: 28px 40px; }
+* { box-sizing: border-box; }
+.wrap { max-width: 880px; margin-inline: auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-family: var(--font-display); font-size: clamp(26px, 5vw, 34px); line-height: 1.2; margin: 0; letter-spacing: .04em; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-size: 17px; margin: 0 0 12px; letter-spacing: .06em; }
+.sub { color: var(--muted); margin: 6px 0 0; font-size: 14px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; min-width: 0; }
+.label { font-size: 12px; color: var(--muted); letter-spacing: .08em; }
+
+/* 参数条 */
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; align-items: end; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+input, select, button { font: inherit; color: var(--ink); }
+input, select { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; min-width: 0; }
+input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 500; cursor: pointer; letter-spacing: .1em; }
+.btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+details.adv { margin-top: 12px; color: var(--muted); font-size: 13px; }
+details.adv summary { cursor: pointer; }
+details.adv .field { max-width: 200px; margin-top: 8px; }
+
+/* 主推号码 */
+.main-num { display: flex; gap: 10px; flex-wrap: wrap; margin-block: 8px 4px; }
+.tile { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tile .pos { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
+.tile .d { width: 64px; height: 76px; border-radius: 8px; display: grid; place-items: center; font-family: var(--font-display); font-size: 42px; font-variant-numeric: tabular-nums; border: 2px solid currentColor; background: var(--bg); }
+.tile .wx { font-size: 12px; font-weight: 500; }
+.wx-木 { color: var(--wood); } .wx-火 { color: var(--fire); } .wx-土 { color: var(--earth); } .wx-金 { color: var(--metal); } .wx-水 { color: var(--water); }
+.alts { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.alt { display: flex; align-items: baseline; gap: 8px; }
+.alt .tag { font-size: 12px; color: var(--muted); }
+.alt .n { font-family: var(--font-display); font-size: 24px; letter-spacing: .12em; font-variant-numeric: tabular-nums; }
+.row-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.note { font-size: 12px; color: var(--muted); margin: 12px 0 0; }
+
+/* 面板网格 */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 20px; }
+.pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+.pillar { border: 1px solid var(--line); border-radius: 8px; padding: 8px 4px; }
+.pillar .t { font-size: 11px; color: var(--muted); }
+.pillar .g { font-family: var(--font-display); font-size: 26px; line-height: 1.25; }
+.pillar.day { border-color: var(--accent); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 14px 0 0; font-size: 14px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; min-width: 0; }
+.hexes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.hex { width: 100%; max-width: 84px; height: auto; }
+.yao { fill: var(--ink); }
+.yao.mv { fill: var(--accent); }
+.hexcap { font-size: 12px; color: var(--muted); }
+.hexcap b { display: block; color: var(--ink); font-weight: 500; font-size: 13px; }
+
+/* 权重图 */
+.wchart { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 4px; }
+.wcol .bars { display: flex; align-items: flex-end; gap: 2px; height: 64px; border-bottom: 1px solid var(--line); }
+.wcol .bar { flex: 1; border-radius: 2px 2px 0 0; background: currentColor; opacity: .85; min-width: 0; }
+.wcol .bar.anchor { opacity: 1; outline: 2px solid var(--ink); outline-offset: 1px; }
+.wcol .axis { display: flex; gap: 2px; font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.wcol .axis span { flex: 1; text-align: center; min-width: 0; }
+.wcol .cap { font-size: 11px; color: var(--muted); text-align: center; margin-top: 4px; }
+
+.reading p { margin: 0 0 10px; font-size: 14.5px; max-width: 65ch; }
+.reading p:last-child { margin-bottom: 0; }
+footer { font-size: 12px; color: var(--muted); max-width: 65ch; }
+@media (max-width: 420px) { .tile .d { width: 54px; height: 66px; font-size: 36px; } .main-num { gap: 8px; } .panel { padding: 14px; } }
+@media (prefers-reduced-motion: no-preference) { .tile .d { transition: transform .15s; } .tile .d:hover { transform: translateY(-2px); } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>4D 玄学推演</h1>
+    <p class="sub">干支五行 · 梅花易数 · 二十八星宿,换算成四位数字</p>
+  </header>
+
+  <section class="panel" aria-label="参数">
+    <div class="controls">
+      <div class="field"><label class="label" for="date">公历日期</label><input type="date" id="date"></div>
+      <div class="field"><label class="label" for="hour">时辰</label><select id="hour"></select></div>
+      <div class="field"><label class="label" for="num">生成组数</label><select id="num"></select></div>
+      <div class="field"><button class="btn" id="go" type="button">推演</button></div>
+    </div>
+    <details class="adv">
+      <summary>高级:星宿校准</summary>
+      <div class="field"><label class="label" for="offset">偏移(默认 4,按 7 的倍数调整)</label><input type="number" id="offset" value="4" step="1"></div>
+    </details>
+  </section>
+
+  <section class="panel" id="result" aria-live="polite"></section>
+
+  <div class="grid">
+    <section class="panel"><h2>四柱与日主</h2><div id="pillars"></div></section>
+    <section class="panel"><h2>梅花易数起卦</h2><div id="gua"></div></section>
+  </div>
+  <div class="grid">
+    <section class="panel"><h2>值日星宿</h2><div id="mansion"></div></section>
+    <section class="panel"><h2>各位数字权重</h2><div id="weights"></div></section>
+  </div>
+  <section class="panel reading"><h2>解读</h2><div id="reading"></div></section>
+
+  <footer>4D 开奖是随机事件,每组号码的中奖概率都相同。本页是干支、八卦与星宿的趣味换算,不构成任何投注建议。起卦以公历月日代替农历,节气按固定日期近似,交节前后一天可能与万年历有出入。</footer>
+</div>
+
+<script>
+/* ============ 基础数据表 ============ */
+const STEMS = "甲乙丙丁戊己庚辛壬癸";
+const BRANCHES = "子丑寅卯辰巳午未申酉戌亥";
+const STEM_WX = {}; "木木火火土土金金水水".split("").forEach((w, i) => STEM_WX[STEMS[i]] = w);
+const SHENG = { 木: "火", 火: "土", 土: "金", 金: "水", 水: "木" };
+const KE = { 木: "土", 土: "水", 水: "火", 火: "金", 金: "木" };
+// 河图数:1,6水 2,7火 3,8木 4,9金 5,0土
+const DIGIT_WX = { 1: "水", 6: "水", 2: "火", 7: "火", 3: "木", 8: "木", 4: "金", 9: "金", 5: "土", 0: "土" };
+// 先天八卦数;爻自下而上,1 为阳,0 为阴
+const TRIGRAMS = {
+  1: ["乾", [1, 1, 1]], 2: ["兑", [1, 1, 0]], 3: ["离", [1, 0, 1]], 4: ["震", [1, 0, 0]],
+  5: ["巽", [0, 1, 1]], 6: ["坎", [0, 1, 0]], 7: ["艮", [0, 0, 1]], 8: ["坤", [0, 0, 0]],
+};
+const LINES_TO_NUM = {}; Object.entries(TRIGRAMS).forEach(([k, v]) => LINES_TO_NUM[v[1].join("")] = +k);
+const MANSIONS = [
+  ["角","吉"],["亢","凶"],["氐","凶"],["房","吉"],["心","凶"],["尾","吉"],["箕","吉"],
+  ["斗","吉"],["牛","凶"],["女","凶"],["虚","凶"],["危","凶"],["室","吉"],["壁","吉"],
+  ["奎","凶"],["娄","吉"],["胃","吉"],["昴","凶"],["毕","吉"],["觜","凶"],["参","吉"],
+  ["井","吉"],["鬼","凶"],["柳","凶"],["星","凶"],["张","吉"],["翼","凶"],["轸","吉"],
+];
+const QIYAO = ["木","金","土","日","月","火","水"];
+const QIYAO_WX = { 木: "木", 金: "金", 土: "土", 日: "火", 月: "水", 火: "火", 水: "水" };
+const DIRECTIONS = ["东方青龙", "北方玄武", "西方白虎", "南方朱雀"];
+// 月令按"节"划分:[月, 日, 月支序号]
+const JIE_TERMS = [[1,5,1],[2,4,2],[3,6,3],[4,5,4],[5,5,5],[6,6,6],[7,7,7],[8,7,8],[9,8,9],[10,8,10],[11,7,11],[12,7,0]];
+const SEASON_WX = { 2: "木", 3: "木", 5: "火", 6: "火", 8: "金", 9: "金", 11: "水", 0: "水", 1: "土", 4: "土", 7: "土", 10: "土" };
+
+const mod = (a, n) => ((a % n) + n) % n;
+
+/* ============ 干支历法 ============ */
+function jdn(y, m, d) {
+  return Math.round(Date.UTC(y, m - 1, d) / 86400000) + 719163 + 1721425;
+}
+const ganzhiStr = i => STEMS[i % 10] + BRANCHES[i % 12];
+const dayGZ = (y, m, d) => mod(jdn(y, m, d) + 49, 60);
+function yearGZ(y, m, d) { return mod((m * 100 + d >= 204 ? y : y - 1) - 4, 60); }
+function monthBranch(m, d) {
+  let cur = 0;
+  for (const [mm, dd, br] of JIE_TERMS) if (m * 100 + d >= mm * 100 + dd) cur = br;
+  return cur;
+}
+function monthGZ(y, m, d) {
+  const br = monthBranch(m, d);
+  const ys = yearGZ(y, m, d) % 10;
+  const start = { 0: 2, 5: 2, 1: 4, 6: 4, 2: 6, 7: 6, 3: 8, 8: 8, 4: 0, 9: 0 }[ys]; // 五虎遁
+  const stem = (start + mod(br - 2, 12)) % 10;
+  for (let i = 0; i < 60; i++) if (i % 10 === stem && i % 12 === br) return i;
+  throw new Error("月柱计算失败");
+}
+const hourBranch = h => Math.floor((h + 1) / 2) % 12;
+const mansionIndex = (y, m, d, offset) => mod(jdn(y, m, d) + offset, 28);
+
+/* ============ 梅花易数 ============ */
+function buildHexagram(y, m, d, hour) {
+  const ybr = yearGZ(y, m, d) % 12 + 1;
+  const sUp = ybr + m + d;
+  const sAll = sUp + hourBranch(hour) + 1;
+  const up = sUp % 8 || 8, low = sAll % 8 || 8, move = sAll % 6 || 6;
+  const lines = [...TRIGRAMS[low][1], ...TRIGRAMS[up][1]];
+  const changed = lines.slice(); changed[move - 1] ^= 1;
+  const num = a => LINES_TO_NUM[a.join("")];
+  return {
+    up, low, move, lines, changed,
+    cLow: num(changed.slice(0, 3)), cUp: num(changed.slice(3)),
+    hLow: num(lines.slice(1, 4)), hUp: num(lines.slice(2, 5)),
+    hu: [lines[1], lines[2], lines[3], lines[2], lines[3], lines[4]],
+  };
+}
+
+/* ============ 五行旺衰与喜用 ============ */
+function strength(dayWx, season) {
+  if (dayWx === season) return "旺";
+  if (SHENG[season] === dayWx) return "相";
+  if (SHENG[dayWx] === season) return "休";
+  if (KE[dayWx] === season) return "囚";
+  return "死";
+}
+function favored(dayWx, state) {
+  const resource = Object.keys(SHENG).find(k => SHENG[k] === dayWx);
+  const output = SHENG[dayWx], wealth = KE[dayWx];
+  const officer = Object.keys(KE).find(k => KE[k] === dayWx);
+  if (state === "旺" || state === "相") {
+    return { map: { [output]: 1.8, [wealth]: 1.6, [officer]: 1.3, [dayWx]: 0.8, [resource]: 0.7 },
+      head: "日主偏强", rule: "喜泄耗克", list: `${output}(食伤)、${wealth}(财)、${officer}(官杀)` };
+  }
+  return { map: { [resource]: 1.8, [dayWx]: 1.6, [output]: 0.8, [wealth]: 0.7, [officer]: 0.6 },
+    head: "日主偏弱", rule: "喜生扶", list: `${resource}(印)、${dayWx}(比劫)` };
+}
+
+/* ============ 种子随机数 ============ */
+function xmur3(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+  return () => { h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return (h ^= h >>> 16) >>> 0; };
+}
+function mulberry32(a) {
+  return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function pick(weights, rnd) {
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = rnd() * total;
+  for (let i = 0; i < weights.length; i++) { r -= weights[i]; if (r < 0) return i; }
+  return weights.length - 1;
+}
+
+/* ============ 核心:生成 4D ============ */
+function predict(y, m, d, hour, nSets, offset) {
+  const dgz = dayGZ(y, m, d), mgz = monthGZ(y, m, d), ygz = yearGZ(y, m, d);
+  const dayStem = STEMS[dgz % 10], dayWx = STEM_WX[dayStem];
+  const season = SEASON_WX[monthBranch(m, d)];
+  const state = strength(dayWx, season);
+  const fav = favored(dayWx, state);
+  const gua = buildHexagram(y, m, d, hour);
+  const mi = mansionIndex(y, m, d, offset);
+  const [mName, mLuck] = MANSIONS[mi];
+  const mQiyao = QIYAO[mi % 7], mWx = QIYAO_WX[mQiyao];
+  const mDigit = (mi + 1) % 10;
+  const changedNum = gua.move > 3 ? gua.cUp : gua.cLow;
+  const anchors = [gua.up % 10, gua.low % 10, changedNum % 10, mDigit];
+
+  const dateStr = `${y}-${m}-${d}`;
+  const seedStr = `${ygz}-${mgz}-${dgz}-${hourBranch(hour)}-${JSON.stringify(gua)}-${mi}-${dateStr}`;
+  const rnd = mulberry32(xmur3(seedStr)());
+  const luckFactor = mLuck === "吉" ? 1.15 : 0.9;
+
+  const weightsByPos = anchors.map((_, pos) => {
+    const ws = [];
+    for (let dg = 0; dg < 10; dg++) {
+      let w = 1.0;
+      w *= 1 + (fav.map[DIGIT_WX[dg]] - 1) * luckFactor;
+      if (dg === anchors[pos]) w *= 3.0;
+      if (anchors.includes(dg)) w *= 1.4;
+      if (DIGIT_WX[dg] === mWx) w *= 1.2;
+      ws.push(w);
+    }
+    return ws;
+  });
+  const results = [];
+  for (let k = 0; k < nSets; k++) results.push(weightsByPos.map(ws => pick(ws, rnd)).join(""));
+
+  return { y, m, d, hour, ygz, mgz, dgz, hb: hourBranch(hour), dayStem, dayWx, season, state, fav, gua,
+    mansion: { name: mName, luck: mLuck, qiyao: mQiyao, wx: mWx, dir: DIRECTIONS[Math.floor(mi / 7)], idx: mi },
+    anchors, changedNum, weightsByPos, results };
+}
+
+/* ============ 页面渲染 ============ */
+if (typeof document !== "undefined") {
+  const $ = id => document.getElementById(id);
+  const tn = n => TRIGRAMS[n][0];
+  const digitsOf = wx => Object.keys(DIGIT_WX).filter(k => DIGIT_WX[k] === wx).map(Number).sort((a, b) => a - b);
+
+  function hexSVG(lines, move, label) {
+    let s = `<svg class="hex" viewBox="0 0 84 76" role="img" aria-label="${label}">`;
+    for (let i = 0; i < 6; i++) {
+      const y = 4 + (5 - i) * 12, cls = move === i + 1 ? "yao mv" : "yao";
+      s += lines[i]
+        ? `<rect class="${cls}" x="4" y="${y}" width="76" height="7" rx="1"/>`
+        : `<rect class="${cls}" x="4" y="${y}" width="32" height="7" rx="1"/><rect class="${cls}" x="48" y="${y}" width="32" height="7" rx="1"/>`;
+    }
+    return s + "</svg>";
+  }
+
+  function render(r) {
+    const g = r.gua, mn = r.mansion;
+    const posNames = ["千位", "百位", "十位", "个位"];
+    const nums = r.results;
+
+    // 结果
+    const mainTiles = nums[0].split("").map((c, i) =>
+      `<div class="tile"><span class="pos">${posNames[i]}</span><div class="d wx-${DIGIT_WX[c]}">${c}</div><span class="wx wx-${DIGIT_WX[c]}">${DIGIT_WX[c]}</span></div>`).join("");
+    const alts = nums.slice(1).map((n, i) => `<div class="alt"><span class="tag">备选${i + 1}</span><span class="n">${n}</span></div>`).join("");
+    $("result").innerHTML = `
+      <div class="row-head"><h2 style="margin:0">主推号码</h2><button class="btn ghost" id="copy" type="button">复制全部</button></div>
+      <div class="main-num">${mainTiles}</div>
+      ${alts ? `<div class="alts">${alts}</div>` : ""}
+      <p class="note">${r.y}-${String(r.m).padStart(2, "0")}-${String(r.d).padStart(2, "0")} ${BRANCHES[r.hb]}时。同一日期、时辰和校准值,结果固定不变。</p>`;
+    $("copy").onclick = async () => {
+      const text = nums.join(" ");
+      try { await navigator.clipboard.writeText(text); $("copy").textContent = "已复制"; }
+      catch (e) { const range = document.createRange(); range.selectNodeContents($("result").querySelector(".main-num")); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range); $("copy").textContent = "请手动复制"; }
+      setTimeout(() => $("copy").textContent = "复制全部", 1800);
+    };
+
+    // 四柱
+    const pil = [["年柱", r.ygz], ["月柱", r.mgz], ["日柱", r.dgz]].map(([t, i], k) =>
+      `<div class="pillar${k === 2 ? " day" : ""}"><div class="t">${t}</div><div class="g"><span class="wx-${STEM_WX[STEMS[i % 10]]}">${STEMS[i % 10]}</span><br>${BRANCHES[i % 12]}</div></div>`).join("")
+      + `<div class="pillar"><div class="t">时支</div><div class="g">·<br>${BRANCHES[r.hb]}</div></div>`;
+    $("pillars").innerHTML = `<div class="pillars">${pil}</div>
+      <dl class="kv">
+        <dt>日主</dt><dd><span class="wx-${r.dayWx}">${r.dayStem}${r.dayWx}</span></dd>
+        <dt>月令当令</dt><dd><span class="wx-${r.season}">${r.season}</span></dd>
+        <dt>旺衰</dt><dd>${r.state}(${r.fav.head})</dd>
+        <dt>${r.fav.rule}</dt><dd>${r.fav.list}</dd>
+      </dl>`;
+
+    // 卦象
+    $("gua").innerHTML = `<div class="hexes">
+        <div>${hexSVG(g.lines, g.move, "本卦")}<div class="hexcap"><b>本卦</b>${tn(g.up)}上${tn(g.low)}下</div></div>
+        <div>${hexSVG(g.changed, null, "变卦")}<div class="hexcap"><b>变卦</b>${tn(g.cUp)}上${tn(g.cLow)}下</div></div>
+        <div>${hexSVG(g.hu, null, "互卦")}<div class="hexcap"><b>互卦</b>${tn(g.hUp)}上${tn(g.hLow)}下</div></div>
+      </div>
+      <dl class="kv">
+        <dt>卦数</dt><dd>上卦 ${g.up},下卦 ${g.low},变卦取 ${r.changedNum}</dd>
+        <dt>动爻</dt><dd>第 ${g.move} 爻(图中高亮)</dd>
+      </dl>`;
+
+    // 星宿
+    $("mansion").innerHTML = `
+      <div class="pillars" style="grid-template-columns:auto 1fr;text-align:left;align-items:center;gap:16px">
+        <div class="pillar day" style="padding:10px 18px"><div class="t">第 ${mn.idx + 1} 宿</div><div class="g" style="font-size:40px">${mn.name}</div></div>
+        <dl class="kv" style="margin:0">
+          <dt>七曜</dt><dd>${mn.qiyao}曜,属<span class="wx-${mn.wx}">${mn.wx}</span></dd>
+          <dt>方位</dt><dd>${mn.dir}</dd>
+          <dt>吉凶</dt><dd>${mn.luck}</dd>
+          <dt>灵动数</dt><dd>${r.anchors[3]}</dd>
+        </dl>
+      </div>`;
+
+    // 权重
+    const cols = r.weightsByPos.map((ws, pos) => {
+      const max = Math.max(...ws);
+      const bars = ws.map((w, dg) => `<div class="bar wx-${DIGIT_WX[dg]}${dg === r.anchors[pos] ? " anchor" : ""}" style="height:${Math.round(w / max * 100)}%" title="${dg}: ${w.toFixed(2)}"></div>`).join("");
+      const axis = ws.map((_, dg) => `<span>${dg}</span>`).join("");
+      return `<div class="wcol"><div class="bars">${bars}</div><div class="axis">${axis}</div><div class="cap">${posNames[pos]}</div></div>`;
+    }).join("");
+    $("weights").innerHTML = `<div class="wchart">${cols}</div><p class="note">柱高为抽取时的相对权重,颜色是该数字的五行,描边的是该位的锚点数。</p>`;
+
+    // 解读
+    const top = Object.entries(r.fav.map).sort((a, b) => b[1] - a[1]).slice(0, 2);
+    const lucky = [...new Set(top.flatMap(([wx]) => digitsOf(wx)))].sort((a, b) => a - b);
+    $("reading").innerHTML = `
+      <p>今日日主为${r.dayStem}${r.dayWx},月令「${r.state}」,所以取${r.fav.list}为用神。对应的河图数 ${lucky.join("、")} 在各位的权重被提高。</p>
+      <p>梅花易数得${tn(g.up)}上${tn(g.low)}下,第 ${g.move} 爻动,变为${tn(g.cUp)}上${tn(g.cLow)}下。卦数 ${g.up}、${g.low}、${r.changedNum} 依次作为千位、百位、十位的锚点。</p>
+      <p>值日星宿是${mn.name}宿(${mn.luck}),灵动数 ${r.anchors[3]} 作为个位锚点。${mn.luck === "吉" ? "吉宿会放大喜用五行的倾向。" : "凶宿会收敛喜用五行的倾向,偏保守。"}</p>`;
+  }
+
+  // 初始化控件
+  const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  $("date").value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  for (let h = 0; h < 24; h++) $("hour").insertAdjacentHTML("beforeend", `<option value="${h}">${pad(h)}:00 ${BRANCHES[hourBranch(h)]}时</option>`);
+  $("hour").value = now.getHours();
+  for (let n = 1; n <= 8; n++) $("num").insertAdjacentHTML("beforeend", `<option value="${n}">${n} 组</option>`);
+  $("num").value = 3;
+
+  function run() {
+    const v = $("date").value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { $("result").innerHTML = "<p>请先选择公历日期。</p>"; return; }
+    const [y, m, d] = v.split("-").map(Number);
+    render(predict(y, m, d, +$("hour").value, +$("num").value, parseInt($("offset").value, 10) || 0));
+  }
+  $("go").onclick = run;
+  ["date", "hour", "num", "offset"].forEach(id => $(id).addEventListener("change", run));
+  run();
+}
+</script>
+<script>
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", function () { navigator.serviceWorker.register("./sw.js").catch(function () {}); });
+}
+</script>
+</body>
+</html>
