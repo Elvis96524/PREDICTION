@@ -72,9 +72,6 @@ input, select { background: var(--bg); border: 1px solid var(--line); border-rad
 input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 500; cursor: pointer; letter-spacing: .1em; }
 .btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
-details.adv { margin-top: 12px; color: var(--muted); font-size: 13px; }
-details.adv summary { cursor: pointer; }
-details.adv .field { max-width: 200px; margin-top: 8px; }
 
 /* 主推号码 */
 .main-num { display: flex; gap: 10px; flex-wrap: wrap; margin-block: 8px 4px; }
@@ -149,10 +146,6 @@ header { display: flex; flex-direction: column; align-items: flex-start; }
       <div class="field"><label class="label" for="num">生成组数</label><select id="num"></select></div>
       <div class="field"><button class="btn" id="go" type="button">推演</button></div>
     </div>
-    <details class="adv">
-      <summary>高级:星宿校准</summary>
-      <div class="field"><label class="label" for="offset">偏移(默认 4,按 7 的倍数调整)</label><input type="number" id="offset" value="4" step="1"></div>
-    </details>
   </section>
 
   <section class="panel" id="result" aria-live="polite"></section>
@@ -356,7 +349,7 @@ if (typeof document !== "undefined") {
       <div class="row-head"><h2 style="margin:0">主推号码</h2><button class="btn ghost" id="copy" type="button">复制全部</button></div>
       <div class="main-num">${mainTiles}</div>
       ${alts ? `<div class="alts">${alts}</div>` : ""}
-      <p class="note">${r.y}-${String(r.m).padStart(2, "0")}-${String(r.d).padStart(2, "0")} ${BRANCHES[r.hb]}时。同一日期、时辰和校准值,结果固定不变。</p>`;
+      <p class="note">${r.y}-${String(r.m).padStart(2, "0")}-${String(r.d).padStart(2, "0")} ${BRANCHES[r.hb]}时。同一日期和时辰,结果固定不变。</p>`;
     $("copy").onclick = async () => {
       const text = nums.join(" ");
       try { await navigator.clipboard.writeText(text); $("copy").textContent = "已复制"; }
@@ -430,10 +423,10 @@ if (typeof document !== "undefined") {
     const v = $("date").value;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { $("result").innerHTML = "<p>请先选择公历日期。</p>"; return; }
     const [y, m, d] = v.split("-").map(Number);
-    render(predict(y, m, d, +$("hour").value, +$("num").value, parseInt($("offset").value, 10) || 0));
+    render(predict(y, m, d, +$("hour").value, +$("num").value, 4));
   }
   $("go").onclick = run;
-  ["date", "hour", "num", "offset"].forEach(id => $(id).addEventListener("change", run));
+  ["date", "hour", "num"].forEach(id => $(id).addEventListener("change", run));
   run();
 }
 </script>
