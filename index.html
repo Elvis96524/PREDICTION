@@ -116,6 +116,13 @@ input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-v
 .reading p { margin: 0 0 10px; font-size: 14.5px; max-width: 65ch; }
 .reading p:last-child { margin-bottom: 0; }
 footer { font-size: 12px; color: var(--muted); max-width: 65ch; }
+.mine-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 20px; }
+.wxrow { display: grid; grid-template-columns: 18px 1fr 18px; gap: 8px; align-items: center; font-size: 13px; margin-bottom: 6px; }
+.wxbar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.wxbar i { display: block; height: 100%; background: currentColor; border-radius: 4px; }
+.wxrow b { color: var(--ink); font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
+.rel { margin: 10px 0 0; padding-left: 1.2em; font-size: 13.5px; display: flex; flex-direction: column; gap: 4px; }
+.pillars.p3 { grid-template-columns: repeat(3, 1fr); }
 @media (max-width: 420px) { .tile .d { width: 54px; height: 66px; font-size: 36px; } .main-num { gap: 8px; } .panel { padding: 14px; } }
 @media (prefers-reduced-motion: no-preference) { .tile .d { transition: transform .15s; } .tile .d:hover { transform: translateY(-2px); } }
 </style>
@@ -148,7 +155,19 @@ header { display: flex; flex-direction: column; align-items: flex-start; }
     </div>
   </section>
 
+  <section class="panel" id="birth" aria-label="生辰八字">
+    <h2>我的生辰八字(可选)</h2>
+    <div class="controls">
+      <div class="field"><label class="label" for="bdate">出生日期(公历)</label><input type="date" id="bdate"></div>
+      <div class="field"><label class="label" for="bhour">出生时辰</label><select id="bhour"></select></div>
+      <div class="field"><button class="btn ghost" id="bclear" type="button">清除</button></div>
+    </div>
+    <p class="note">填写后,号码会结合你的本命五行喜用,以及当天与你的日支、生肖的冲合关系。生辰只保存在这台设备的浏览器里,不会上传。</p>
+  </section>
+
   <section class="panel" id="result" aria-live="polite"></section>
+
+  <section class="panel" id="mine" hidden><h2>本命八字</h2><div id="mine-body"></div></section>
 
   <div class="grid">
     <section class="panel"><h2>四柱与日主</h2><div id="pillars"></div></section>
@@ -262,6 +281,70 @@ function favored(dayWx, state) {
     head: "日主偏弱", rule: "喜生扶", list: `${resource}(印)、${dayWx}(比劫)` };
 }
 
+/* ============ 本命八字 ============ */
+const BRANCH_WX = {}; "水土木木土火火土金金土水".split("").forEach((w, i) => BRANCH_WX[BRANCHES[i]] = w);
+const WX_LIST = ["木", "火", "土", "金", "水"];
+const ZODIAC = "鼠牛虎兔龙蛇马羊猴鸡狗猪";
+const CHONG = [[0, 6], [1, 7], [2, 8], [3, 9], [4, 10], [5, 11]];   // 六冲
+const HE = [[0, 1], [2, 11], [3, 10], [4, 9], [5, 8], [6, 7]];       // 六合
+const pairHas = (list, a, b) => list.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
+
+// e 相对日主 dayWx 的十神大类
+function roleOf(dayWx, e) {
+  if (e === dayWx) return "比劫";
+  if (SHENG[e] === dayWx) return "印";
+  if (SHENG[dayWx] === e) return "食伤";
+  if (KE[dayWx] === e) return "财";
+  return "官杀";
+}
+
+// 由出生日期与时辰(0-11 为子到亥,-1 为不详)排出八字
+function bazi(y, m, d, hb) {
+  const ygz = yearGZ(y, m, d), mgz = monthGZ(y, m, d), dgz = dayGZ(y, m, d);
+  const pillars = [
+    { label: "年柱", stem: ygz % 10, branch: ygz % 12 },
+    { label: "月柱", stem: mgz % 10, branch: mgz % 12 },
+    { label: "日柱", stem: dgz % 10, branch: dgz % 12 },
+  ];
+  if (hb >= 0) {
+    const start = { 0: 0, 5: 0, 1: 2, 6: 2, 2: 4, 7: 4, 3: 6, 8: 6, 4: 8, 9: 8 }[dgz % 10]; // 五鼠遁
+    pillars.push({ label: "时柱", stem: (start + hb) % 10, branch: hb });
+  }
+  const dayStem = STEMS[dgz % 10], dayWx = STEM_WX[dayStem];
+  const counts = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
+  let support = 0, total = 0;
+  pillars.forEach(p => {
+    const sw = STEM_WX[STEMS[p.stem]], bw = BRANCH_WX[BRANCHES[p.branch]];
+    counts[sw]++; counts[bw]++;
+    if (p.label !== "日柱") { total += 1; if (sw === dayWx || SHENG[sw] === dayWx) support += 1; }
+    const wt = p.label === "月柱" ? 2 : 1;   // 月令得令权重加倍
+    total += wt; if (bw === dayWx || SHENG[bw] === dayWx) support += wt;
+  });
+  const ratio = support / total, strong = ratio >= 0.5;
+  const season = SEASON_WX[monthBranch(m, d)];
+  const fav = favored(dayWx, strong ? "旺" : "休");
+  const map = Object.assign({}, fav.map);
+  const missing = WX_LIST.filter(e => counts[e] === 0);
+  missing.forEach(e => { map[e] *= 1.15; });   // 八字缺的五行略加成
+  return { pillars, counts, dayStem, dayWx, season, seasonState: strength(dayWx, season), ratio, strong,
+    fav: Object.assign({}, fav, { map }), missing, key: pillars.map(p => p.stem + "." + p.branch).join("_"),
+    zodiac: ZODIAC[ygz % 12], ybranch: ygz % 12, dbranch: dgz % 12 };
+}
+
+// 今日(天干五行 tWx、地支 tBranch)与本命的关系,返回对权重强度的调整系数
+function personalRelation(bz, tWx, tBranch) {
+  let factor = 1; const notes = [];
+  const role = roleOf(bz.dayWx, tWx), v = bz.fav.map[tWx];
+  if (v >= 1.25) { factor *= 1.08; notes.push(`今日天干属${tWx},对你是${role},是本命喜用`); }
+  else if (v <= 0.95) { factor *= 0.92; notes.push(`今日天干属${tWx},对你是${role},偏忌`); }
+  else notes.push(`今日天干属${tWx},对你是${role},影响平平`);
+  [["日支", bz.dbranch], ["年支(属" + bz.zodiac + ")", bz.ybranch]].forEach(([nm, b]) => {
+    if (pairHas(CHONG, b, tBranch)) { factor *= 0.88; notes.push(`今日${BRANCHES[tBranch]}与你的${nm}${BRANCHES[b]}相冲,宜保守`); }
+    else if (pairHas(HE, b, tBranch)) { factor *= 1.1; notes.push(`今日${BRANCHES[tBranch]}与你的${nm}${BRANCHES[b]}相合,有助力`); }
+  });
+  return { factor, notes, role };
+}
+
 /* ============ 种子随机数 ============ */
 function xmur3(str) {
   let h = 1779033703 ^ str.length;
@@ -280,7 +363,7 @@ function pick(weights, rnd) {
 }
 
 /* ============ 核心:生成 4D ============ */
-function predict(y, m, d, hour, nSets, offset) {
+function predict(y, m, d, hour, nSets, offset, bz) {
   const dgz = dayGZ(y, m, d), mgz = monthGZ(y, m, d), ygz = yearGZ(y, m, d);
   const dayStem = STEMS[dgz % 10], dayWx = STEM_WX[dayStem];
   const season = SEASON_WX[monthBranch(m, d)];
@@ -295,15 +378,18 @@ function predict(y, m, d, hour, nSets, offset) {
   const anchors = [gua.up % 10, gua.low % 10, changedNum % 10, mDigit];
 
   const dateStr = `${y}-${m}-${d}`;
-  const seedStr = `${ygz}-${mgz}-${dgz}-${hourBranch(hour)}-${JSON.stringify(gua)}-${mi}-${dateStr}`;
+  const seedStr = `${ygz}-${mgz}-${dgz}-${hourBranch(hour)}-${JSON.stringify(gua)}-${mi}-${dateStr}` + (bz ? "-" + bz.key : "");
   const rnd = mulberry32(xmur3(seedStr)());
-  const luckFactor = mLuck === "吉" ? 1.15 : 0.9;
+  const rel = bz ? personalRelation(bz, dayWx, dgz % 12) : null;
+  const elemMap = {};
+  WX_LIST.forEach(e => { elemMap[e] = bz ? (fav.map[e] + bz.fav.map[e]) / 2 : fav.map[e]; });
+  const luckFactor = (mLuck === "吉" ? 1.15 : 0.9) * (rel ? rel.factor : 1);
 
   const weightsByPos = anchors.map((_, pos) => {
     const ws = [];
     for (let dg = 0; dg < 10; dg++) {
       let w = 1.0;
-      w *= 1 + (fav.map[DIGIT_WX[dg]] - 1) * luckFactor;
+      w *= 1 + (elemMap[DIGIT_WX[dg]] - 1) * luckFactor;
       if (dg === anchors[pos]) w *= 3.0;
       if (anchors.includes(dg)) w *= 1.4;
       if (DIGIT_WX[dg] === mWx) w *= 1.2;
@@ -314,7 +400,7 @@ function predict(y, m, d, hour, nSets, offset) {
   const results = [];
   for (let k = 0; k < nSets; k++) results.push(weightsByPos.map(ws => pick(ws, rnd)).join(""));
 
-  return { y, m, d, hour, ygz, mgz, dgz, hb: hourBranch(hour), dayStem, dayWx, season, state, fav, gua,
+  return { y, m, d, hour, ygz, mgz, dgz, hb: hourBranch(hour), dayStem, dayWx, season, state, fav, gua, bz, rel, elemMap,
     mansion: { name: mName, luck: mLuck, qiyao: mQiyao, wx: mWx, dir: DIRECTIONS[Math.floor(mi / 7)], idx: mi },
     anchors, changedNum, weightsByPos, results };
 }
@@ -336,6 +422,35 @@ if (typeof document !== "undefined") {
     return s + "</svg>";
   }
 
+  function renderMine(r) {
+    const box = $("mine");
+    if (!r.bz) { box.hidden = true; return; }
+    const b = r.bz;
+    box.hidden = false;
+    const pil = b.pillars.map(p => `<div class="pillar${p.label === "日柱" ? " day" : ""}"><div class="t">${p.label}</div><div class="g"><span class="wx-${STEM_WX[STEMS[p.stem]]}">${STEMS[p.stem]}</span><br><span class="wx-${BRANCH_WX[BRANCHES[p.branch]]}">${BRANCHES[p.branch]}</span></div></div>`).join("");
+    const maxC = Math.max(...Object.values(b.counts), 1);
+    const rows = WX_LIST.map(e => `<div class="wxrow wx-${e}"><span>${e}</span><div class="wxbar"><i style="width:${Math.round(b.counts[e] / maxC * 100)}%"></i></div><b>${b.counts[e]}</b></div>`).join("");
+    $("mine-body").innerHTML = `<div class="mine-grid">
+      <div><div class="pillars${b.pillars.length === 3 ? " p3" : ""}">${pil}</div>
+        <dl class="kv">
+          <dt>生肖</dt><dd>${b.zodiac}</dd>
+          <dt>日主</dt><dd><span class="wx-${b.dayWx}">${b.dayStem}${b.dayWx}</span>,月令${b.season}当令,${b.seasonState}</dd>
+          <dt>强弱</dt><dd>${b.strong ? "身偏强" : "身偏弱"}(同类和生扶约占 ${Math.round(b.ratio * 100)}%)</dd>
+          <dt>${b.fav.rule}</dt><dd>${b.fav.list}</dd>
+          <dt>缺五行</dt><dd>${b.missing.length ? b.missing.join("、") : "无"}</dd>
+        </dl></div>
+      <div><div class="label" style="margin-bottom:8px">八字五行分布${b.pillars.length === 3 ? "(未填时辰,不含时柱)" : ""}</div>${rows}
+        <div class="label" style="margin:14px 0 4px">今日与你的关系</div>
+        <ul class="rel">${r.rel.notes.map(n => `<li>${n}</li>`).join("")}</ul></div>
+    </div>`;
+  }
+
+  function personalReading(r) {
+    const b = r.bz;
+    return `<p>你的日主是${b.dayStem}${b.dayWx},${b.strong ? "身偏强" : "身偏弱"},本命${b.fav.rule}${b.missing.length ? ",八字缺" + b.missing.join("、") + "略作补足" : ""}。各数字的五行权重取"今日喜用"与"本命喜用"的平均值,再按今日与你的关系调整强度。</p>
+      <p>${r.rel.notes.join(";")}。</p>`;
+  }
+
   function render(r) {
     const g = r.gua, mn = r.mansion;
     const posNames = ["千位", "百位", "十位", "个位"];
@@ -349,7 +464,7 @@ if (typeof document !== "undefined") {
       <div class="row-head"><h2 style="margin:0">主推号码</h2><button class="btn ghost" id="copy" type="button">复制全部</button></div>
       <div class="main-num">${mainTiles}</div>
       ${alts ? `<div class="alts">${alts}</div>` : ""}
-      <p class="note">${r.y}-${String(r.m).padStart(2, "0")}-${String(r.d).padStart(2, "0")} ${BRANCHES[r.hb]}时。同一日期和时辰,结果固定不变。</p>`;
+      <p class="note">${r.y}-${String(r.m).padStart(2, "0")}-${String(r.d).padStart(2, "0")} ${BRANCHES[r.hb]}时。同一日期和时辰,结果固定不变。${r.bz ? "已按你的本命八字调整。" : "未填写生辰,按当日通用推演。"}</p>`;
     $("copy").onclick = async () => {
       const text = nums.join(" ");
       try { await navigator.clipboard.writeText(text); $("copy").textContent = "已复制"; }
@@ -401,13 +516,15 @@ if (typeof document !== "undefined") {
     }).join("");
     $("weights").innerHTML = `<div class="wchart">${cols}</div><p class="note">柱高为抽取时的相对权重,颜色是该数字的五行,描边的是该位的锚点数。</p>`;
 
+    renderMine(r);
+
     // 解读
     const top = Object.entries(r.fav.map).sort((a, b) => b[1] - a[1]).slice(0, 2);
     const lucky = [...new Set(top.flatMap(([wx]) => digitsOf(wx)))].sort((a, b) => a - b);
     $("reading").innerHTML = `
       <p>今日日主为${r.dayStem}${r.dayWx},月令「${r.state}」,所以取${r.fav.list}为用神。对应的河图数 ${lucky.join("、")} 在各位的权重被提高。</p>
       <p>梅花易数得${tn(g.up)}上${tn(g.low)}下,第 ${g.move} 爻动,变为${tn(g.cUp)}上${tn(g.cLow)}下。卦数 ${g.up}、${g.low}、${r.changedNum} 依次作为千位、百位、十位的锚点。</p>
-      <p>值日星宿是${mn.name}宿(${mn.luck}),灵动数 ${r.anchors[3]} 作为个位锚点。${mn.luck === "吉" ? "吉宿会放大喜用五行的倾向。" : "凶宿会收敛喜用五行的倾向,偏保守。"}</p>`;
+      <p>值日星宿是${mn.name}宿(${mn.luck}),灵动数 ${r.anchors[3]} 作为个位锚点。${mn.luck === "吉" ? "吉宿会放大喜用五行的倾向。" : "凶宿会收敛喜用五行的倾向,偏保守。"}</p>${r.bz ? personalReading(r) : ""}`;
   }
 
   // 初始化控件
@@ -418,15 +535,36 @@ if (typeof document !== "undefined") {
   $("hour").value = now.getHours();
   for (let n = 1; n <= 8; n++) $("num").insertAdjacentHTML("beforeend", `<option value="${n}">${n} 组</option>`);
   $("num").value = 3;
+  $("bhour").insertAdjacentHTML("beforeend", '<option value="-1">不详(不用时柱)</option>');
+  for (let b = 0; b < 12; b++) {
+    const st = b === 0 ? 23 : 2 * b - 1;
+    $("bhour").insertAdjacentHTML("beforeend", `<option value="${b}">${BRANCHES[b]}时 ${pad(st)}:00-${pad((st + 1) % 24)}:59</option>`);
+  }
+  $("bhour").value = "-1";
+  try {
+    const saved = JSON.parse(localStorage.getItem("xuan4d.birth") || "null");
+    if (saved && saved.date) { $("bdate").value = saved.date; $("bhour").value = String(saved.hour); }
+  } catch (e) {}
 
   function run() {
     const v = $("date").value;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { $("result").innerHTML = "<p>请先选择公历日期。</p>"; return; }
     const [y, m, d] = v.split("-").map(Number);
-    render(predict(y, m, d, +$("hour").value, +$("num").value, 4));
+    let bz = null;
+    const bv = $("bdate").value, bh = +$("bhour").value;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(bv)) {
+      const [by, bm, bd] = bv.split("-").map(Number);
+      if (by >= 1900 && by <= now.getFullYear()) bz = bazi(by, bm, bd, bh);
+    }
+    try {
+      if (bv) localStorage.setItem("xuan4d.birth", JSON.stringify({ date: bv, hour: bh }));
+      else localStorage.removeItem("xuan4d.birth");
+    } catch (e) {}
+    render(predict(y, m, d, +$("hour").value, +$("num").value, 4, bz));
   }
   $("go").onclick = run;
-  ["date", "hour", "num"].forEach(id => $(id).addEventListener("change", run));
+  $("bclear").onclick = () => { $("bdate").value = ""; $("bhour").value = "-1"; run(); };
+  ["date", "hour", "num", "bdate", "bhour"].forEach(id => $(id).addEventListener("change", run));
   run();
 }
 </script>

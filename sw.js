@@ -2,7 +2,7 @@
  * 同源文件优先联网、失败时用缓存(这样更新后用户能拿到新版本);
  * Google 字体采用"先用缓存、后台更新"。
  * 发布新版本时,把下面的 VERSION 改一下即可清掉旧缓存。 */
-const VERSION = "v3";
+const VERSION = "v4";
 const APP_CACHE = "4d-app-" + VERSION;
 const FONT_CACHE = "4d-fonts";
 const SHELL = [
