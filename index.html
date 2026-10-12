@@ -122,6 +122,16 @@ footer { font-size: 12px; color: var(--muted); max-width: 65ch; }
 @media (max-width: 420px) { .tile .d { width: 54px; height: 66px; font-size: 36px; } .main-num { gap: 8px; } .panel { padding: 14px; } }
 @media (prefers-reduced-motion: no-preference) { .tile .d { transition: transform .15s; } .tile .d:hover { transform: translateY(-2px); } }
 </style>
+<style>
+header { display: flex; flex-direction: column; align-items: flex-start; }
+.install { margin-top: 12px; }
+.sheet { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: flex-end; justify-content: center; padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 10; }
+.sheet-box { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; padding: 20px; width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px; max-height: 85vh; overflow-y: auto; }
+.sheet-box h2 { margin: 0; }
+.sheet-box ol { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; font-size: 14.5px; }
+.sheet-box .note { margin: 0; }
+.sheet-box .which { font-weight: 500; margin: 0; font-size: 14px; }
+</style>
 </head>
 <body>
 
@@ -129,6 +139,7 @@ footer { font-size: 12px; color: var(--muted); max-width: 65ch; }
   <header>
     <h1>4D 玄学推演</h1>
     <p class="sub">干支五行 · 梅花易数 · 二十八星宿,换算成四位数字</p>
+    <button class="btn install" id="install" type="button" hidden>安装到手机</button>
   </header>
 
   <section class="panel" aria-label="参数">
@@ -157,6 +168,15 @@ footer { font-size: 12px; color: var(--muted); max-width: 65ch; }
   <section class="panel reading"><h2>解读</h2><div id="reading"></div></section>
 
   <footer>4D 开奖是随机事件,每组号码的中奖概率都相同。本页是干支、八卦与星宿的趣味换算,不构成任何投注建议。起卦以公历月日代替农历,节气按固定日期近似,交节前后一天可能与万年历有出入。</footer>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-box" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <h2 id="sheet-title">安装到手机</h2>
+    <div id="sheet-body"></div>
+    <p class="note">如果你是在微信、QQ 等应用里打开的,请先点右上角菜单,选"在浏览器打开",再安装。</p>
+    <button class="btn" id="sheet-close" type="button">知道了</button>
+  </div>
 </div>
 
 <script>
@@ -416,6 +436,59 @@ if (typeof document !== "undefined") {
   ["date", "hour", "num", "offset"].forEach(id => $(id).addEventListener("change", run));
   run();
 }
+</script>
+<script>
+(function () {
+  var btn = document.getElementById("install");
+  var sheet = document.getElementById("sheet");
+  var body = document.getElementById("sheet-body");
+  var closeBtn = document.getElementById("sheet-close");
+  if (!btn || !sheet) return;
+
+  var standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+  if (standalone) return; // 已经装好并从主屏幕打开,不显示按钮
+
+  var ua = navigator.userAgent || "";
+  var isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  var deferred = null;
+
+  btn.hidden = false;
+
+  window.addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault();
+    deferred = e;
+  });
+  window.addEventListener("appinstalled", function () {
+    deferred = null;
+    btn.hidden = true;
+    closeSheet();
+  });
+
+  function openSheet() {
+    if (isIOS) {
+      body.innerHTML = '<p class="which">iPhone / iPad(Safari)</p><ol><li>点浏览器底部的分享按钮(方框加向上箭头)。</li><li>向下滑,选"添加到主屏幕"。</li><li>点右上角"添加",主屏幕上就有图标了。</li></ol>';
+    } else {
+      body.innerHTML = '<p class="which">Android(Chrome)</p><ol><li>点右上角菜单(三个点)。</li><li>选"安装应用"或"添加到主屏幕"。</li><li>点"安装",图标会出现在桌面或应用列表里。</li></ol>';
+    }
+    sheet.hidden = false;
+    closeBtn.focus();
+  }
+  function closeSheet() { sheet.hidden = true; }
+
+  btn.addEventListener("click", function () {
+    if (deferred) {
+      var d = deferred;
+      deferred = null;
+      d.prompt();
+      d.userChoice.then(function (c) { if (c && c.outcome === "accepted") btn.hidden = true; }).catch(function () {});
+    } else {
+      openSheet();
+    }
+  });
+  closeBtn.addEventListener("click", closeSheet);
+  sheet.addEventListener("click", function (e) { if (e.target === sheet) closeSheet(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeSheet(); });
+})();
 </script>
 <script>
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
